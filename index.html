@@ -50,27 +50,31 @@ input{user-select:text;-webkit-user-select:text}
 #skinbox{background:#c6c6c6;color:#222;border:3px solid #555;border-radius:8px;padding:12px;width:min(92vw,360px);display:flex;flex-direction:column;gap:8px}
 #skinbox h3{margin:0}
 .pick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#bar div{display:flex;align-items:center;justify-content:center;font-size:18px}
+#uw{position:fixed;inset:0;background:rgba(30,90,200,.38);pointer-events:none;display:none}
 </style></head><body>
 <canvas id="c"></canvas><div id="cross"></div>
-<div id="bar"></div><div id="hp"></div><div id="on">🟡 Bağlanıyor…</div><div id="invbtn">🎒</div><div id="inv"><div id="invbox"><h3>Envanter</h3><div id="grid"></div><div id="ely" class="it" style="margin-top:8px"></div><p>Üstten bir hotbar yuvası seç, sonra eşyaya dokun: yuvaya yerleşir.</p><button id="close">Kapat</button></div></div><div id="flash"></div><div id="skinbtn">👤</div><div id="skin"><div id="skinbox"><h3>Karakter</h3><div class="pick"></div><label>Gömlek rengi <input type="color" id="shirtc" value="#00a8a8"> <button id="shirtr">↺</button></label><button id="skinclose">Kapat</button></div></div><div id="mine"><div id="minefill"></div></div><div id="chat"></div><div id="chatbtn">💬</div><div id="chatbox"><input id="chatin" maxlength="120" placeholder="Mesaj yaz…" autocomplete="off"><button id="chatsend">Gönder</button></div><div id="namebox"><div><h3>Adın ne?</h3><input id="namein" maxlength="16" autocomplete="off"><div class="pick"></div><button id="namego">Başla</button></div></div>
+<div id="bar"></div><div id="hp"></div><div id="on">🟡 Bağlanıyor…</div><div id="invbtn">🎒</div><div id="inv"><div id="invbox"><h3>Envanter</h3><div id="grid"></div><div id="ely" class="it" style="margin-top:8px"></div><p>Üstten bir hotbar yuvası seç, sonra eşyaya dokun: yuvaya yerleşir.</p><button id="close">Kapat</button></div></div><div id="flash"></div><div id="uw"></div><div id="skinbtn">👤</div><div id="skin"><div id="skinbox"><h3>Karakter</h3><div class="pick"></div><label>Gömlek rengi <input type="color" id="shirtc" value="#00a8a8"> <button id="shirtr">↺</button></label><button id="skinclose">Kapat</button></div></div><div id="mine"><div id="minefill"></div></div><div id="chat"></div><div id="chatbtn">💬</div><div id="chatbox"><input id="chatin" maxlength="120" placeholder="Mesaj yaz…" autocomplete="off"><button id="chatsend">Gönder</button></div><div id="namebox"><div><h3>Adın ne?</h3><input id="namein" maxlength="16" autocomplete="off"><div class="pick"></div><button id="namego">Başla</button></div></div>
 <div id="joy"><div id="knob"></div></div>
 <div class="btn" id="mode">⛏️</div><div class="btn" id="jump">⬆️</div><div class="btn" id="boost">🚀</div><div id="gl"></div>
 <div id="hint">Basılı tut: kır · Dokun: koy/vur · Sürükle: etrafa bak · Sol joystick: yürü · 🎒/E: envanter · oyuncuya dokun: vur · 💬/T: sohbet · 👤 karakter · /yardim: komutlar · Elitra: envanterden tak, havada ⬆️ ile süzül, 🚀/F hızlan</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const N=256,H=24,W=new Uint8Array(N*N*H);
+const N=256,H=24,SPX=192,SPZ=192,SPACE_ALT=300,W=new Uint8Array(N*N*H);
 const inb=(x,y,z)=>x>=0&&z>=0&&y>=0&&x<N&&z<N&&y<H;
-const get=(x,y,z)=>y<0?1:inb(x,y,z)?W[x+z*N+y*N*N]:0;
+const get=(x,y,z)=>y<0?((x>=SPX&&z>=SPZ)?0:1):inb(x,y,z)?W[x+z*N+y*N*N]:0;
 const set=(x,y,z,v)=>{if(inb(x,y,z))W[x+z*N+y*N*N]=v};
+const solidAt=(x,y,z)=>{const t=get(x,y,z);return t&&t!=30},waterAt=(x,y,z)=>get(Math.floor(x),Math.floor(y),Math.floor(z))==30;
 let seed=7;const rnd=()=>(seed=seed*16807%2147483647)/2147483647;
 const topY=(x,z)=>{for(let y=H-1;y>=0;y--)if(get(x,y,z))return y;return 0};
 const hgt=(x,z)=>Math.max(2,Math.min(17,Math.floor(8+3*Math.sin(x*.2)+3*Math.cos(z*.17)+2*Math.sin((x+z)*.09)+4*Math.sin(x*.025+1)*Math.cos(z*.03))));
 for(let x=0;x<N;x++)for(let z=0;z<N;z++){
+  if(x>=SPX&&z>=SPZ)continue;
   const h=hgt(x,z);
   for(let y=0;y<=h;y++)set(x,y,z,y==0?13:y==h?(h<=5?6:1):y>h-3?2:3);
 }
 for(let x=3;x<N-3;x++)for(let z=3;z<N-3;z++){
-  if(((x*73856093^z*19349663)>>>0)%113)continue;
+  if(((x*73856093^z*19349663)>>>0)%113||(x>=SPX-3&&z>=SPZ-3))continue;
   const h=hgt(x,z);if(get(x,h,z)!=1)continue;
   for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++)for(let dy=3;dy<=5;dy++){
     if(dy==5&&(Math.abs(dx)>1||Math.abs(dz)>1))continue;
@@ -78,9 +82,16 @@ for(let x=3;x<N-3;x++)for(let z=3;z<N-3;z++){
     if(!get(x+dx,h+dy,z+dz))set(x+dx,h+dy,z+dz,5)}
   for(let y=1;y<=5;y++)set(x,h+y,z,4);
 }
+// uzay: yüzen asteroitler + uzay istasyonu
+const hsh=(a,b)=>{let h=Math.imul(a,374761393)+Math.imul(b,668265263)|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296};
+for(let k=0;k<18;k++){const ax=SPX+7+hsh(k,1)*(N-SPX-14),az=SPZ+7+hsh(k,2)*(N-SPZ-14),ay=5+hsh(k,3)*12,r=3+hsh(k,4)*4,t=k%3==0?32:31;
+  for(let x=Math.floor(ax-r);x<=ax+r;x++)for(let z=Math.floor(az-r);z<=az+r;z++)for(let y=Math.floor(ay-r*.6);y<=ay+r*.6;y++){
+    const dx=(x-ax)/r,dz=(z-az)/r,dy=(y-ay)/(r*.6);if(dx*dx+dy*dy+dz*dz<1&&inb(x,y,z))set(x,y,z,t)}}
+for(let x=214;x<=234;x++)for(let z=214;z<=234;z++){const d=Math.hypot(x-224,z-224);
+  if(d<=9){for(let y=9;y<H;y++)set(x,y,z,0);set(x,10,z,d>8?34:33);if(d<=5)set(x,9,z,33)}}
 // colors [top, side, bottom]
-const C={1:[0x5fae47,0x7b6b3a,0x6b4f2d],2:[0x7a5a36],3:[0x8a8a8a],4:[0xa07a45,0x6e4f2a,0xa07a45],5:[0x2f7d32],6:[0xdbc98a],7:[0xb8894f],8:[0xa8523f],9:[0xf2f6f8],10:[0x2a2438],11:[0xe8c53a],12:[0x4a7fc4],13:[0x2b2b2b],14:[0x717171],15:[0x202020],16:[0xd9d9d9],17:[0x4eeed9],18:[0x1fd762],19:[0xb02e26],20:[0x3c44aa],21:[0xf1c40f],22:[0x5e7c16],23:[0xf0f0f0],24:[0x1d1d21],25:[0xb5651d],26:[0xa8d0f5],27:[0x4a3621],28:[0xd5c98c],29:[0xdbd3a0]};
-const HARD={1:.9,2:.75,3:7.5,4:3,5:.3,6:.75,7:3,8:10,9:1,10:250,11:15,12:15,13:Infinity,14:10,15:25,16:25,17:25,18:25,19:1.2,20:1.2,21:1.2,22:1.2,23:1.2,24:1.2,25:.75,26:.75,27:3,28:3,29:4};
+const C={1:[0x5fae47,0x7b6b3a,0x6b4f2d],2:[0x7a5a36],3:[0x8a8a8a],4:[0xa07a45,0x6e4f2a,0xa07a45],5:[0x2f7d32],6:[0xdbc98a],7:[0xb8894f],8:[0xa8523f],9:[0xf2f6f8],10:[0x2a2438],11:[0xe8c53a],12:[0x4a7fc4],13:[0x2b2b2b],14:[0x717171],15:[0x202020],16:[0xd9d9d9],17:[0x4eeed9],18:[0x1fd762],19:[0xb02e26],20:[0x3c44aa],21:[0xf1c40f],22:[0x5e7c16],23:[0xf0f0f0],24:[0x1d1d21],25:[0xb5651d],26:[0xa8d0f5],27:[0x4a3621],28:[0xd5c98c],29:[0xdbd3a0],30:[0x2f6fd0],31:[0x9b9b9b],32:[0x8a4b3a],33:[0xcfd4dc],34:[0x7df9ff],100:[0x9aa0a6],101:[0x3a7bd5],102:[0xe8452c]};
+const HARD={1:.9,2:.75,3:7.5,4:3,5:.3,6:.75,7:3,8:10,9:1,10:250,11:15,12:15,13:Infinity,14:10,15:25,16:25,17:25,18:25,19:1.2,20:1.2,21:1.2,22:1.2,23:1.2,24:1.2,25:.75,26:.75,27:3,28:3,29:4,31:7.5,32:7.5,33:25,34:1.5};
 const col=(t,f)=>{const a=C[t];return new THREE.Color(f==2?a[0]:f==3?a[a.length-1]:a[a.length>1?1:0])};
 const F=[[[1,0,0],[1,0,0,1,1,0,1,1,1,1,0,1],.8],[[-1,0,0],[0,0,1,0,1,1,0,1,0,0,0,0],.8],
 [[0,1,0],[0,1,1,1,1,1,1,1,0,0,1,0],1],[[0,-1,0],[0,0,0,1,0,0,1,0,1,0,0,1],.5],
@@ -91,7 +102,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.Fog(0x87ceeb,24,RD*16-8);
 const cam=new THREE.PerspectiveCamera(70,1,.05,RD*16+16);cam.rotation.order='YXZ';
 // chunk sistemi: 16x16 sütunluk parçalar, sadece yakındakiler çizilir, değişen parça yeniden kurulur
-const CS=16,CN=N/CS,MAT=new THREE.MeshBasicMaterial({vertexColors:true}),chunks=new Map(),CT={};let tick=0;
+const CS=16,CN=N/CS,MAT=new THREE.MeshBasicMaterial({vertexColors:true}),MATW=new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.62,depthWrite:false,side:THREE.DoubleSide}),chunks=new Map(),CT={};let tick=0;
 for(const t in C)CT[t]={0:col(t,0),2:col(t,2),3:col(t,3)};
 const offs=[];for(let dx=-RD;dx<=RD;dx++)for(let dz=-RD;dz<=RD;dz++)if(dx*dx+dz*dz<=RD*RD)offs.push([dx,dz,dx*dx+dz*dz]);offs.sort((a,b)=>a[2]-b[2]);
 function markDirty(x,z){
@@ -100,33 +111,39 @@ function markDirty(x,z){
     if((a==-1&&(x&15)!=0)||(a==1&&(x&15)!=15)||(b==-1&&(z&15)!=0)||(b==1&&(z&15)!=15))continue;
     const c=chunks.get((cx+a)+','+(cz+b));if(c)c.dirty=true}}
 function buildChunk(cx,cz){
-  const P=[],K=[],I=[];let n=0;const x0=cx*CS,z0=cz*CS;
+  const P=[],K=[],I=[],PW=[],KW=[],IW=[];let n=0,nw=0;const x0=cx*CS,z0=cz*CS;
   for(let y=0;y<H;y++)for(let z=z0;z<z0+CS;z++)for(let x=x0;x<x0+CS;x++){
     const t=get(x,y,z);if(!t)continue;
-    const v=.92+((x*73856093^y*19349663^z*83492791)>>>0)%100/625;
+    const isW=t==30,v=.92+((x*73856093^y*19349663^z*83492791)>>>0)%100/625;
     for(let f=0;f<6;f++){
-      const d=F[f][0];if(get(x+d[0],y+d[1],z+d[2]))continue;
+      const d=F[f][0],nb=get(x+d[0],y+d[1],z+d[2]);
+      if(isW?nb:(nb&&nb!=30))continue;
       const c=CT[t][f==2?2:f==3?3:0],s=F[f][2]*v,q=F[f][1];
-      for(let i=0;i<4;i++){P.push(x+q[i*3],y+q[i*3+1],z+q[i*3+2]);K.push(c.r*s,c.g*s,c.b*s)}
-      I.push(n,n+1,n+2,n,n+2,n+3);n+=4}}
-  const key=cx+','+cz;let c=chunks.get(key);if(!c){c={m:null,dirty:false,cx,cz};chunks.set(key,c)}
+      if(isW){const top=get(x,y+1,z)==30?1:.9;
+        for(let i=0;i<4;i++){PW.push(x+q[i*3],y+(q[i*3+1]?top:0),z+q[i*3+2]);KW.push(c.r*s,c.g*s,c.b*s)}
+        IW.push(nw,nw+1,nw+2,nw,nw+2,nw+3);nw+=4}
+      else{for(let i=0;i<4;i++){P.push(x+q[i*3],y+q[i*3+1],z+q[i*3+2]);K.push(c.r*s,c.g*s,c.b*s)}
+        I.push(n,n+1,n+2,n,n+2,n+3);n+=4}}}
+  const key=cx+','+cz;let c=chunks.get(key);if(!c){c={m:null,w:null,dirty:false,cx,cz};chunks.set(key,c)}
   if(c.m){scene.remove(c.m);c.m.geometry.dispose();c.m=null}
-  c.dirty=false;if(!n)return;
-  const g=new THREE.BufferGeometry();
-  g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));
-  g.setAttribute('color',new THREE.Float32BufferAttribute(K,3));g.setIndex(I);
-  c.m=new THREE.Mesh(g,MAT);scene.add(c.m)}
+  if(c.w){scene.remove(c.w);c.w.geometry.dispose();c.w=null}
+  c.dirty=false;
+  const mkm=(p,k,i,mat)=>{const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setAttribute('color',new THREE.Float32BufferAttribute(k,3));g.setIndex(i);
+    const m=new THREE.Mesh(g,mat);scene.add(m);return m};
+  if(n)c.m=mkm(P,K,I,MAT);
+  if(nw){c.w=mkm(PW,KW,IW,MATW);c.w.renderOrder=1}}
 function chunkTick(budget=3){
   const pcx=Math.floor(px/CS),pcz=Math.floor(pz/CS);
   for(const[dx,dz]of offs){const cx=pcx+dx,cz=pcz+dz;if(cx<0||cz<0||cx>=CN||cz>=CN)continue;
     const c=chunks.get(cx+','+cz);if(c&&!c.dirty)continue;
     buildChunk(cx,cz);if(--budget<=0)break}
-  if(++tick%60==0)for(const[k,c]of chunks)if(Math.abs(c.cx-pcx)>RD+1||Math.abs(c.cz-pcz)>RD+1){if(c.m){scene.remove(c.m);c.m.geometry.dispose()}chunks.delete(k)}}
+  if(++tick%60==0)for(const[k,c]of chunks)if(Math.abs(c.cx-pcx)>RD+1||Math.abs(c.cz-pcz)>RD+1){if(c.m){scene.remove(c.m);c.m.geometry.dispose()}if(c.w){scene.remove(c.w);c.w.geometry.dispose()}chunks.delete(k)}}
 const hl=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.01,1.01,1.01)),new THREE.LineBasicMaterial({color:0x000000}));
 scene.add(hl);
 // player
 let px=N/2+.5,pz=N/2+.5,py=topY(N/2,N/2)+2,vy=0,yaw=0,pitch=0,ground=false;
-const hit=(x,y,z)=>{for(let a=Math.floor(x-.3);a<=Math.floor(x+.3);a++)for(let b=Math.floor(y);b<=Math.floor(y+1.8);b++)for(let c=Math.floor(z-.3);c<=Math.floor(z+.3);c++)if(get(a,b,c))return true;return false};
+const hit=(x,y,z)=>{for(let a=Math.floor(x-.3);a<=Math.floor(x+.3);a++)for(let b=Math.floor(y);b<=Math.floor(y+1.8);b++)for(let c=Math.floor(z-.3);c<=Math.floor(z+.3);c++)if(solidAt(a,b,c))return true;return false};
 // hasar: tüm hasar (düşme dahil) tek fonksiyondan geçer
 let hp=20,peak=py,invUntil=0;const hpEl=document.getElementById('hp'),fl=document.getElementById('flash');
 const showHp=()=>{const f=Math.ceil(hp/2);hpEl.textContent='❤️'.repeat(f)+'🖤'.repeat(10-f)};
@@ -140,13 +157,13 @@ showHp();
 // inputs
 let sel=1,place=false,jx=0,jy=0;const keys={};
 let hasElytra=false,gliding=false,jumpEdge=false,gAcc=0,boostUntil=0,boostReady=0;const gv=[0,0,0];
-const bar=document.getElementById('bar'),slots=[1,2,3,4,5,6,7];let si=0;
+const bar=document.getElementById('bar'),slots=[1,2,3,4,102,6,101];let si=0;
 const hex=t=>'#'+C[t][0].toString(16).padStart(6,'0');
-const refresh=()=>{sel=slots[si];[...bar.children].forEach((d,i)=>{d.style.background=hex(slots[i]);d.classList.toggle('on',i==si)})};
+const refresh=()=>{sel=slots[si];[...bar.children].forEach((d,i)=>{d.style.background=hex(slots[i]);d.textContent=slots[i]==100?'🪣':slots[i]==101?'💧':slots[i]==102?'🎆':'';d.classList.toggle('on',i==si)})};
 slots.forEach((t,i)=>{const d=document.createElement('div');d.onpointerdown=e=>{e.stopPropagation();si=i;refresh()};bar.appendChild(d)});
 refresh();
 // envanter
-const NAME={1:'Çimen',2:'Toprak',3:'Taş',4:'Odun',5:'Yaprak',6:'Kum',7:'Tahta',8:'Tuğla',9:'Kar',10:'Obsidyen',11:'Altın',12:'Lapis',14:'Kırıktaş',15:'Kömür Bloğu',16:'Demir Bloğu',17:'Elmas Bloğu',18:'Zümrüt Bloğu',19:'Kırmızı Yün',20:'Mavi Yün',21:'Sarı Yün',22:'Yeşil Yün',23:'Beyaz Yün',24:'Siyah Yün',25:'Kızıl Kum',26:'Buz',27:'Koyu Tahta',28:'Huş Tahta',29:'Kumtaşı'};
+const NAME={1:'Çimen',2:'Toprak',3:'Taş',4:'Odun',5:'Yaprak',6:'Kum',7:'Tahta',8:'Tuğla',9:'Kar',10:'Obsidyen',11:'Altın',12:'Lapis',14:'Kırıktaş',15:'Kömür Bloğu',16:'Demir Bloğu',17:'Elmas Bloğu',18:'Zümrüt Bloğu',19:'Kırmızı Yün',20:'Mavi Yün',21:'Sarı Yün',22:'Yeşil Yün',23:'Beyaz Yün',24:'Siyah Yün',25:'Kızıl Kum',26:'Buz',27:'Koyu Tahta',28:'Huş Tahta',29:'Kumtaşı',31:'Ay Taşı',32:'Kızıl Asteroit',33:'Uzay Metali',34:'Neon',100:'Kova',101:'Su Kovası',102:'Havai Fişek'};
 const inv=document.getElementById('inv'),grid=document.getElementById('grid');let invOpen=false;
 function toggleInv(){invOpen=!invOpen;inv.style.display=invOpen?'flex':'none';if(invOpen){jx=jy=0;document.exitPointerLock&&document.exitPointerLock()}}
 Object.keys(NAME).forEach(k=>{const t=+k,d=document.createElement('div');d.className='it';d.innerHTML=`<i style="background:${hex(t)}"></i>${NAME[t]}`;d.onpointerdown=e=>{e.stopPropagation();slots[si]=t;refresh()};grid.appendChild(d)});
@@ -161,13 +178,16 @@ const jmove=e=>{const r=joy.getBoundingClientRect();let dx=e.clientX-r.left-60,d
 joy.onpointerdown=e=>{jid=e.pointerId;joy.setPointerCapture(jid);jmove(e)};
 joy.onpointermove=e=>{if(e.pointerId==jid)jmove(e)};
 joy.onpointerup=joy.onpointercancel=e=>{jid=null;jx=jy=0;knob.style.transform=''};
-function ray(){
+function ray(w){
   const cp=Math.cos(pitch),d=[-Math.sin(yaw)*cp,Math.sin(pitch),-Math.cos(yaw)*cp],o=[px,py+1.62,pz];let last=null;
   for(let t=0;t<6;t+=.04){const c=[Math.floor(o[0]+d[0]*t),Math.floor(o[1]+d[1]*t),Math.floor(o[2]+d[2]*t)];
-    if(get(...c))return{b:c,p:last};last=c}
+    if(w?get(...c):solidAt(...c))return{b:c,p:last};last=c}
   return null}
 function act(pl){
-  if(!pl){const k=pvpHit();if(k)attack(k);return}
+  if(!pl){const k=pvpHit();if(k){attack(k);return}}
+  if(sel==102){useFirework();return}
+  if(sel>=100){useBucket();return}
+  if(!pl)return;
   const r=ray();if(!r||!r.p||!inb(...r.p))return;
   set(...r.p,sel);
   if(hit(px,py,pz))set(...r.p,0);else{markDirty(r.p[0],r.p[2]);saveCol(r.p[0],r.p[2])}}
@@ -251,7 +271,7 @@ function updateOthers(){
 function pvpHit(){
   const cp=Math.cos(pitch),d=[-Math.sin(yaw)*cp,Math.sin(pitch),-Math.cos(yaw)*cp];
   for(let t=0;t<4;t+=.1){const X=px+d[0]*t,Y=py+1.62+d[1]*t,Z=pz+d[2]*t;
-    if(get(Math.floor(X),Math.floor(Y),Math.floor(Z)))return null;
+    if(solidAt(Math.floor(X),Math.floor(Y),Math.floor(Z)))return null;
     for(const[k,g]of others)if(Math.abs(X-g.position.x)<.4&&Y>g.position.y&&Y<g.position.y+1.9&&Math.abs(Z-g.position.z)<.4)return k}
   return null}
 function attack(k){
@@ -288,7 +308,7 @@ try{hasElytra=localStorage.getItem('bd_ely')=='1'}catch(e){}showEly();
 function toggleEly(){hasElytra=!hasElytra;if(!hasElytra&&gliding)stopGlide(false);try{localStorage.setItem('bd_ely',hasElytra?'1':'0')}catch(e){}showEly()}
 elyEl.onpointerdown=e=>{e.stopPropagation();toggleEly()};
 boostEl.onpointerdown=e=>{e.preventDefault();fire()};
-function fire(){const n=performance.now();if(gliding&&n>boostReady){boostUntil=n+1100;boostReady=n+1600}}
+function fire(){const n=performance.now();if(gliding&&n>boostReady){boostUntil=n+1100;boostReady=n+1600;boostBurst=true}}
 function startGlide(){gliding=true;gv[0]=-Math.sin(yaw)*.2;gv[1]=Math.max(-1.5,vy/20);gv[2]=-Math.cos(yaw)*.2;gAcc=0;peak=py;boostEl.style.display='flex';glEl.style.display='block'}
 function stopGlide(landed){
   if(!gliding)return;gliding=false;boostUntil=0;boostEl.style.display='none';glEl.style.display='none';
@@ -317,6 +337,56 @@ function glideStep(dt,now){
   glEl.textContent='🪽 '+Math.round(Math.hypot(gv[0],gv[1],gv[2])*20)+' b/sn · yükseklik '+Math.round(py)}
 function mkWings(){const w=new THREE.Group(),m=new THREE.MeshBasicMaterial({color:0xb9b4c9});
   for(const sx of[-1,1]){const b=new THREE.Mesh(new THREE.BoxGeometry(.7,.9,.05),m);b.position.set(sx*.4,1.0,.18);w.add(b)}return w}
+// ---- gökyüzü / uzay / parçacıklar / havai fişek ----
+const BLK=new THREE.Color(0),skyBase=new THREE.Color(0x87ceeb),EO=new THREE.Vector3(-28,24,-42);let nightMode=false,boostBurst=false;
+const sg=new THREE.BufferGeometry(),sp3=new Float32Array(1800*3);
+for(let i=0;i<1800;i++){const u=Math.random()*2-1,a=Math.random()*6.283,r=Math.sqrt(1-u*u);sp3[i*3]=r*Math.cos(a)*60;sp3[i*3+1]=u*60;sp3[i*3+2]=r*Math.sin(a)*60}
+sg.setAttribute('position',new THREE.BufferAttribute(sp3,3));
+const stars=new THREE.Points(sg,new THREE.PointsMaterial({color:0x000000,size:2,sizeAttenuation:false,fog:false,depthTest:false,depthWrite:false}));
+stars.frustumCulled=false;stars.renderOrder=-2;stars.visible=false;scene.add(stars);
+const eg=new THREE.IcosahedronGeometry(16,3),ep=eg.attributes.position,ec=new Float32Array(ep.count*3);
+for(let i=0;i<ep.count;i++){const x=ep.getX(i),y=ep.getY(i),z=ep.getZ(i),v=Math.sin(x*.4)+Math.cos(z*.3+y*.25)+Math.sin(y*.5+x*.15),cl=Math.sin(x*.8+z*.6)*Math.cos(y*.7)>.75;
+  const c=cl?[.95,.95,.95]:v>.5?[.25,.6,.28]:[.15,.4,.85];ec[i*3]=c[0];ec[i*3+1]=c[1];ec[i*3+2]=c[2]}
+eg.setAttribute('color',new THREE.BufferAttribute(ec,3));
+const earth=new THREE.Mesh(eg,new THREE.MeshBasicMaterial({vertexColors:true,fog:false,depthTest:false,depthWrite:false}));
+earth.frustumCulled=false;earth.renderOrder=-1;earth.visible=false;scene.add(earth);
+// parçacıklar (toplamsal karışım: sönen parçacık siyaha döner = görünmez)
+const NP=1500,pp=new Float32Array(NP*3),pc=new Float32Array(NP*3),pv=new Float32Array(NP*3),pcol=new Float32Array(NP*3),pl=new Float32Array(NP),pl0=new Float32Array(NP);let pn=0;
+const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(pp,3));pg.setAttribute('color',new THREE.BufferAttribute(pc,3));
+const pts=new THREE.Points(pg,new THREE.PointsMaterial({size:5,sizeAttenuation:false,vertexColors:true,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false,fog:false}));
+pts.frustumCulled=false;scene.add(pts);
+function spark(x,y,z,vx,vy,vz,life,r,g,b){const i=pn++%NP,k=i*3;pp[k]=x;pp[k+1]=y;pp[k+2]=z;pv[k]=vx;pv[k+1]=vy;pv[k+2]=vz;pl[i]=pl0[i]=life;pcol[k]=r;pcol[k+1]=g;pcol[k+2]=b}
+function burst(x,y,z,n=90,sp=9){const h=Math.random(),c=new THREE.Color().setHSL(h,1,.6),c2=new THREE.Color().setHSL((h+.5)%1,1,.6);
+  for(let i=0;i<n;i++){const u=Math.random()*2-1,a=Math.random()*6.283,r=Math.sqrt(1-u*u),s=sp*(.5+Math.random()*.5),cc=i%3?c:c2;
+    spark(x,y,z,r*Math.cos(a)*s,u*s,r*Math.sin(a)*s,1.2+Math.random()*.6,cc.r,cc.g,cc.b)}}
+const rockets=[];
+function launchRocket(){rockets.push({x:px-Math.sin(yaw)*1.6,y:py+.2,z:pz-Math.cos(yaw)*1.6,vy:15,life:1.1+Math.random()*.4})}
+function useFirework(){
+  if(gliding){fire();return}
+  if(px>=SPX&&pz>=SPZ){const cp=Math.cos(pitch);kbx+=-Math.sin(yaw)*cp*14;kbz+=-Math.cos(yaw)*cp*14;vy+=Math.sin(pitch)*10+2;ground=false;burst(px,py+1,pz,40,5);return}
+  launchRocket()}
+function skyTick(inSp,now,dt){
+  const t=inSp?1:Math.min(1,Math.max(0,(py-60)/140));
+  scene.background.copy(skyBase).lerp(BLK,t);scene.fog.color.copy(scene.background);
+  const op=Math.max(t,nightMode?.9:0);stars.visible=op>.02;stars.material.color.setScalar(op);stars.position.copy(cam.position);
+  earth.visible=t>.7;earth.position.copy(cam.position).add(EO);
+  if(gliding&&now<boostUntil){const cp=Math.cos(pitch),lx=-Math.sin(yaw)*cp,ly=Math.sin(pitch),lz=-Math.cos(yaw)*cp;
+    for(let k=0;k<4;k++)spark(px-lx*.6,py+1-ly*.6,pz-lz*.6,-lx*5+(Math.random()-.5)*2,-ly*5+(Math.random()-.5)*2,-lz*5+(Math.random()-.5)*2,.5,1,.65,.2)}
+  if(boostBurst&&now>=boostUntil){boostBurst=false;burst(px,py+1,pz,70,7)}
+  for(let i=rockets.length-1;i>=0;i--){const r=rockets[i];r.y+=r.vy*dt;r.life-=dt;
+    spark(r.x,r.y,r.z,(Math.random()-.5)*1.5,-2,(Math.random()-.5)*1.5,.5,1,.7,.3);
+    if(r.life<=0){burst(r.x,r.y,r.z,110,10);rockets.splice(i,1)}}
+  for(let i=0;i<NP;i++){const k=i*3;if(pl[i]<=0){pc[k]=pc[k+1]=pc[k+2]=0;continue}
+    pl[i]-=dt;pv[k+1]-=7*dt;pp[k]+=pv[k]*dt;pp[k+1]+=pv[k+1]*dt;pp[k+2]+=pv[k+2]*dt;
+    const f=Math.max(0,pl[i]/pl0[i]);pc[k]=pcol[k]*f;pc[k+1]=pcol[k+1]*f;pc[k+2]=pcol[k+2]*f}
+  pg.attributes.position.needsUpdate=true;pg.attributes.color.needsUpdate=true}
+// ---- kova / su ----
+const uwEl=document.getElementById('uw');
+function mlg(h){if(h>5)sys('💧 MLG! '+Math.round(h)+' blok yükseklikten hasarsız indin')}
+function useBucket(){
+  const save=r=>{markDirty(r[0],r[2]);saveCol(r[0],r[2])};
+  if(sel==101){const r=ray();if(!r||!r.p||!inb(...r.p)||get(...r.p)==30)return;set(...r.p,30);slots[si]=100;refresh();save(r.p)}
+  else{const r=ray(true);if(!r||get(...r.b)!=30)return;set(...r.b,0);slots[si]=101;refresh();save(r.b)}}
 // ---- karakter seçimi ----
 const SK=[{n:'Maceracı',skin:0xc99a76,hair:0x4a3321,shirt:0x00a8a8,pants:0x3b3fa8,eye:0x222222},
 {n:'Kaşif',skin:0xe8b894,hair:0xd5802a,shirt:0x6dbb4f,pants:0x6b4b2a,eye:0x2a5a2a},
@@ -345,7 +415,7 @@ const nrm=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g
 const goto=(x,y,z)=>{stopGlide(false);px=Math.min(N-.5,Math.max(.5,x));pz=Math.min(N-.5,Math.max(.5,z));py=y;vy=0;peak=py;kbx=kbz=0};
 function runCmd(line){
   const a=line.slice(1).trim().split(/\s+/),c=nrm(a.shift()||''),num=a.map(Number);
-  if(c=='yardim'||c=='help'||c=='?'){sys('/tp x z | /tp x y z | /tp <oyuncu> · /ver <blok> · /spawn · /kill · /iyiles');sys('/ad <isim> · /zaman gunduz|gece · /konum · /elitra · /karakter <1-'+SK.length+'> · /renk #rrggbb');return}
+  if(c=='yardim'||c=='help'||c=='?'){sys('/tp x z | /tp x y z | /tp <oyuncu> · /ver <blok> · /spawn · /kill · /iyiles');sys('/ad <isim> · /zaman gunduz|gece · /konum · /elitra · /karakter <1-'+SK.length+'> · /renk #rrggbb · /uzay · /dunya');return}
   if(c=='tp'){
     if(a.length>=2&&num.slice(0,Math.min(3,a.length)).every(isFinite)){
       const x=num[0],z=a.length>=3?num[2]:num[1],y=a.length>=3?num[1]:topY(Math.floor(Math.min(N-1,Math.max(0,x))),Math.floor(Math.min(N-1,Math.max(0,z))))+2;
@@ -358,13 +428,14 @@ function runCmd(line){
     const t=ids.find(t=>String(t)==q)||ids.find(t=>nrm(NAME[t])==q)||ids.find(t=>nrm(NAME[t]).startsWith(q))||ids.find(t=>nrm(NAME[t]).includes(q));
     if(!t){sys('Böyle bir blok yok. /ver yazıp listeye bak.');return}
     slots[si]=t;refresh();sys(NAME[t]+' seçili yuvaya konuldu');return}
-  if(c=='spawn'){goto(N/2+.5,topY(N/2,N/2)+2,N/2+.5);sys('Başlangıç noktasındasın');return}
+  if(c=='uzay'||c=='space'){goto(224.5,12,224.5);sys('🚀 Uzay istasyonundasın. Dünyaya dönmek için /dunya');return}
+  if(c=='spawn'||c=='dunya'||c=='world'){goto(N/2+.5,topY(N/2,N/2)+2,N/2+.5);sys('Başlangıç noktasındasın');return}
   if(c=='kill'||c=='ol'){damage('void',99);return}
   if(c=='iyiles'||c=='heal'){hp=20;showHp();sys('Canın yenilendi');return}
   if(c=='ad'||c=='nick'){const n=clean(a.join(' '));if(!n){sys('Kullanım: /ad <isim>');return}myName=n;try{localStorage.setItem('bd_name',n)}catch(e){}sys('Yeni adın: '+n);return}
   if(c=='zaman'||c=='time'){const d=nrm(a[0]||'');
-    if(d=='gece'||d=='night'){scene.background.set(0x0b1026);scene.fog.color.set(0x0b1026);MAT.color.setRGB(.38,.4,.62);sys('Gece oldu (sadece sende)')}
-    else if(d=='gunduz'||d=='day'){scene.background.set(0x87ceeb);scene.fog.color.set(0x87ceeb);MAT.color.setRGB(1,1,1);sys('Gündüz oldu (sadece sende)')}
+    if(d=='gece'||d=='night'){skyBase.set(0x0b1026);nightMode=true;MAT.color.setRGB(.38,.4,.62);sys('Gece oldu (sadece sende)')}
+    else if(d=='gunduz'||d=='day'){skyBase.set(0x87ceeb);nightMode=false;MAT.color.setRGB(1,1,1);sys('Gündüz oldu (sadece sende)')}
     else sys('Kullanım: /zaman gunduz veya /zaman gece');return}
   if(c=='konum'||c=='pos'){sys('x '+px.toFixed(1)+'  y '+py.toFixed(1)+'  z '+pz.toFixed(1));return}
   if(c=='elitra'||c=='elytra'){toggleEly();sys('Elitra '+(hasElytra?'takıldı':'çıkarıldı'));return}
@@ -398,15 +469,18 @@ let last=performance.now();
   const dt=Math.min((now-last)/1000,.05);last=now;
   let f=-jy+(keys.w?1:0)-(keys.s?1:0),s=jx+(keys.d?1:0)-(keys.a?1:0);
   if(invOpen||chatOpen||skinEl.style.display=='flex')f=s=0;const l=Math.hypot(f,s);if(l>1){f/=l;s/=l}
-  if(jumpEdge){jumpEdge=false;if(gliding)stopGlide(false);else if(hasElytra&&!ground&&vy<0&&!invOpen&&!chatOpen)startGlide()}
-  const sp=4.5,sy=Math.sin(yaw),cy=Math.cos(yaw);
+  if(py>=SPACE_ALT&&!(px>=SPX&&pz>=SPZ)){goto(224.5,12,224.5);sys('🚀 Uzaya ulaştın! Dünyaya dönmek için /dunya yaz')}
+  const inSp=px>=SPX&&pz>=SPZ;if(inSp&&gliding)stopGlide(false);
+  if(jumpEdge){jumpEdge=false;if(gliding)stopGlide(false);else if(hasElytra&&!inSp&&!ground&&vy<0&&!invOpen&&!chatOpen)startGlide()}
+  const swim=waterAt(px,py+.3,pz)||waterAt(px,py+1.1,pz),sp=swim?2.8:4.5,sy=Math.sin(yaw),cy=Math.cos(yaw);
   const mx=(-sy*f+cy*s)*sp*dt+kbx*dt,mz=(-cy*f-sy*s)*sp*dt+kbz*dt;kbx*=.9;kbz*=.9;
   if(gliding){glideStep(dt,now)}else{
   if(!hit(px+mx,py,pz))px+=mx;
   if(!hit(px,py,pz+mz))pz+=mz;
-  vy-=25*dt;if(keys[' ']&&ground)vy=8;
+  if(swim){mlg(peak-py);peak=py;vy-=6*dt;vy*=1-Math.min(.9,5*dt);if(keys[' ']&&!invOpen&&!chatOpen)vy=Math.max(vy,3.5)}
+  else{vy-=25*dt*(inSp?.2:1);if(keys[' ']&&ground)vy=8}
   const ny=py+vy*dt;ground=false;
-  if(hit(px,ny,pz)){if(vy<0){ground=true;damage('fall',peak-py)}vy=0;peak=py}
+  if(hit(px,ny,pz)){if(vy<0){ground=true;if(get(Math.floor(px),Math.floor(ny)+1,Math.floor(pz))==30)mlg(peak-py);else damage('fall',(peak-py)*(inSp?.3:1))}vy=0;peak=py}
   else{py=ny;peak=Math.max(peak,py)}}
   if(py<-10)damage('void',99);
   // Minecraft tarzı kırma: basılı tut, sertliğe göre süre; havada 5 kat yavaş; ana kaya kırılamaz
@@ -419,7 +493,7 @@ let last=performance.now();
   if(!mining)mine.k='';mineEl.style.display=mining?'block':'none';
   cam.position.set(px,py+1.62,pz);cam.rotation.set(pitch,yaw,0);
   const r=ray();hl.visible=!!r;if(r)hl.position.set(r.b[0]+.5,r.b[1]+.5,r.b[2]+.5);
-  chunkTick(gliding?6:3);updateOthers();sendPresence(now);
+  uwEl.style.display=waterAt(px,py+1.62,pz)?'block':'none';skyTick(inSp,now,dt);chunkTick(gliding?6:3);updateOthers();sendPresence(now);
   renderer.render(scene,cam);
 })(last);
 </script></body></html>
