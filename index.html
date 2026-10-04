@@ -31,12 +31,22 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #invbox p{font-size:12px;margin:8px 0}
 #close{width:100%;padding:10px;font-size:14px}
 #on{position:fixed;top:calc(78px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);font-size:12px;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none;white-space:nowrap}
+input{user-select:text;-webkit-user-select:text}
+#chat{position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(160px + env(safe-area-inset-bottom,0px));max-width:62vw;font-size:12px;color:#fff;text-shadow:0 1px 2px #000;pointer-events:none;z-index:5}
+#chat div{background:rgba(0,0,0,.35);padding:2px 6px;border-radius:4px;margin-top:2px;word-break:break-word}
+#chatbtn{position:fixed;top:calc(60px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:10px;background:var(--ui);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:20px;z-index:12;touch-action:none}
+#chatbox{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));display:none;gap:6px;z-index:15}
+#chatbox input{flex:1;min-width:0;font-size:16px;padding:10px;border-radius:8px;border:2px solid #555}
+#chatbox button,#namebox button{padding:10px 14px;font-size:14px}
+#namebox{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:20}
+#namebox>div{background:#c6c6c6;padding:16px;border-radius:8px;display:flex;flex-direction:column;gap:8px;width:min(80vw,280px)}
+#namebox h3{margin:0}#namebox input{font-size:16px;padding:10px;border-radius:6px;border:2px solid #555}
 </style></head><body>
 <canvas id="c"></canvas><div id="cross"></div>
-<div id="bar"></div><div id="hp"></div><div id="on">🟡 Bağlanıyor…</div><div id="invbtn">🎒</div><div id="inv"><div id="invbox"><h3>Envanter</h3><div id="grid"></div><p>Üstten bir hotbar yuvası seç, sonra eşyaya dokun: yuvaya yerleşir.</p><button id="close">Kapat</button></div></div><div id="flash"></div>
+<div id="bar"></div><div id="hp"></div><div id="on">🟡 Bağlanıyor…</div><div id="invbtn">🎒</div><div id="inv"><div id="invbox"><h3>Envanter</h3><div id="grid"></div><p>Üstten bir hotbar yuvası seç, sonra eşyaya dokun: yuvaya yerleşir.</p><button id="close">Kapat</button></div></div><div id="flash"></div><div id="chat"></div><div id="chatbtn">💬</div><div id="chatbox"><input id="chatin" maxlength="120" placeholder="Mesaj yaz…" autocomplete="off"><button id="chatsend">Gönder</button></div><div id="namebox"><div><h3>Adın ne?</h3><input id="namein" maxlength="16" autocomplete="off"><button id="namego">Başla</button></div></div>
 <div id="joy"><div id="knob"></div></div>
 <div class="btn" id="mode">⛏️</div><div class="btn" id="jump">⬆️</div>
-<div id="hint">Dokun: kır/koy · Sürükle: etrafa bak · Sol joystick: yürü · 🎒/E: envanter · oyuncuya dokun: vur</div>
+<div id="hint">Dokun: kır/koy · Sürükle: etrafa bak · Sol joystick: yürü · 🎒/E: envanter · oyuncuya dokun: vur · 💬/T: sohbet</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const N=48,H=24,W=new Uint8Array(N*N*H);
@@ -147,7 +157,7 @@ cv.onpointermove=e=>{
   yaw-=dx*.005;pitch=Math.max(-1.5,Math.min(1.5,pitch-dy*.005))};
 cv.onpointerup=cv.onpointercancel=e=>{if(look&&e.pointerId==look.id){if(look.m<12&&performance.now()-look.t<300)act(place);look=null}};
 cv.oncontextmenu=e=>e.preventDefault();
-addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=1;if(e.key>='1'&&e.key<='7'){si=+e.key-1;refresh()}if(e.key.toLowerCase()=='e')toggleInv();});
+addEventListener('keydown',e=>{if(e.target.tagName=='INPUT')return;if(e.key=='t'||e.key=='Enter'){e.preventDefault();openChat();return}keys[e.key.toLowerCase()]=1;if(e.key>='1'&&e.key<='7'){si=+e.key-1;refresh()}if(e.key.toLowerCase()=='e')toggleInv();});
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
 function resize(){renderer.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
@@ -169,7 +179,8 @@ let _fb;const fb=()=>_fb||(_fb=(async()=>{
       peers:()=>list.some(p=>p.sameTab)?list:[...list,self],
       presence:v=>R.set(me,v),
       emit:(t,data)=>R.push(ref('hits/'+data.to),{from:pid,t:Date.now()}),
-      on:(t,h)=>{R.remove(ref('hits/'+pid));R.onChildAdded(ref('hits/'+pid),s=>{const v=s.val()||{};R.remove(s.ref);if(Date.now()-v.t<3000)h({peer:v.from,isMe:false,data:{to:pid}})})}};
+      on:(t,h)=>{R.remove(ref('hits/'+pid));R.onChildAdded(ref('hits/'+pid),s=>{const v=s.val()||{};R.remove(s.ref);if(Date.now()-v.t<3000)h({peer:v.from,isMe:false,data:{to:pid}})})},
+      chat:{send:(n,m)=>R.push(ref('chat'),{n,m,t:Date.now()}),onMsg:cb=>R.onChildAdded(R.query(ref('chat'),R.limitToLast(20)),s=>cb(s.val()||{}))}};
     const db={collection:()=>({
       doc:k=>({set:o=>R.set(ref('cols/'+k),o.c)}),
       onSnapshot:(next,err)=>{const f=type=>s=>next({docChanges:()=>[{type,doc:{id:s.key,data:()=>({c:s.val()})}}]}),e=x=>err&&err({code:x.code});
@@ -191,7 +202,8 @@ function updateOthers(){
   for(const p of ROOM.peers()){const q=p.presence;if(p.sameTab||p.kind!='viewer'||typeof q.x!='number'||typeof q.y!='number'||typeof q.z!='number')continue;
     seen.add(p.peer);let g=others.get(p.peer);
     if(!g){let h=0;for(const c of p.peer)h=(h*31+c.charCodeAt(0))>>>0;g=mk(new THREE.Color().setHSL((h%360)/360,.7,.5));g.position.set(q.x,q.y,q.z);others.set(p.peer,g)}
-    g.position.x+=(q.x-g.position.x)*.25;g.position.y+=(q.y-g.position.y)*.25;g.position.z+=(q.z-g.position.z)*.25;g.rotation.y=+q.r||0;const u=g.userData;u.body.material.color.copy(performance.now()<u.f?RED:u.col)}
+    g.position.x+=(q.x-g.position.x)*.25;g.position.y+=(q.y-g.position.y)*.25;g.position.z+=(q.z-g.position.z)*.25;g.rotation.y=+q.r||0;const u=g.userData;u.body.material.color.copy(performance.now()<u.f?RED:u.col);
+    const nm=clean(q.n)||'Oyuncu';if(u.nm!==nm){if(u.lb){g.remove(u.lb);u.lb.material.map.dispose();u.lb.material.dispose()}u.lb=label(nm);g.add(u.lb);u.nm=nm}}
   for(const[k,g]of others)if(!seen.has(k)){scene.remove(g);others.delete(k)}
   const t='🟢 Çevrimiçi · '+(seen.size+1)+' oyuncu';if(performance.now()>warnUntil&&onEl.textContent!==t)onEl.textContent=t}
 // PvP: vuruş menzili 4 blok; hasarı alan taraf kendi damage() fonksiyonuyla uygular
@@ -207,8 +219,27 @@ function attack(k){
   ROOM.emit('hit',{to:k}).catch(()=>{})}
 function sendPresence(now){
   if(!ROOM||now-lastP<100)return;lastP=now;
-  const v={x:+px.toFixed(2),y:+py.toFixed(2),z:+pz.toFixed(2),r:+yaw.toFixed(2)},j=JSON.stringify(v);
+  const v={x:+px.toFixed(2),y:+py.toFixed(2),z:+pz.toFixed(2),r:+yaw.toFixed(2),n:myName},j=JSON.stringify(v);
   if(j!==lastS){lastS=j;ROOM.presence(v).catch(()=>{})}}
+// adlar ve sohbet (metinler textContent ile basılır, uzunluklar sınırlı)
+const clean=s=>String(s||'').replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,16);
+const cleanMsg=s=>String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,120);
+let chatOpen=false,myName='Oyuncu'+(100+Math.floor(Math.random()*900));
+try{myName=clean(localStorage.getItem('bd_name'))||myName}catch(e){}
+function label(txt){const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.font='bold 34px sans-serif';x.textAlign='center';
+  const w=Math.min(250,x.measureText(txt).width+24);x.fillStyle='rgba(0,0,0,.5)';x.fillRect(128-w/2,8,w,48);x.fillStyle='#fff';x.fillText(txt,128,44,230);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));sp.scale.set(1.6,.4,1);sp.position.y=2.2;sp.renderOrder=10;return sp}
+const chatEl=document.getElementById('chat'),cbox=document.getElementById('chatbox'),cin=document.getElementById('chatin'),nbox=document.getElementById('namebox'),nin=document.getElementById('namein');
+function addMsg(n,m){const d=document.createElement('div'),b=document.createElement('b');b.textContent=n+': ';d.append(b,document.createTextNode(m));chatEl.appendChild(d);while(chatEl.children.length>6)chatEl.firstChild.remove();setTimeout(()=>d.remove(),12000)}
+function openChat(){if(chatOpen||nbox.style.display=='none'===false)return;chatOpen=true;jx=jy=0;document.exitPointerLock&&document.exitPointerLock();cbox.style.display='flex';cin.value='';cin.focus()}
+function closeChat(){chatOpen=false;cbox.style.display='none';cin.blur()}
+function sendChat(){const m=cleanMsg(cin.value);if(m){if(ROOM&&ROOM.chat)ROOM.chat.send(myName,m).catch(()=>{});else addMsg(myName,m)}closeChat()}
+cin.onkeydown=e=>{if(e.key=='Enter'){e.preventDefault();sendChat()}else if(e.key=='Escape')closeChat()};
+document.getElementById('chatsend').onpointerdown=e=>{e.preventDefault();sendChat()};
+document.getElementById('chatbtn').onpointerdown=e=>{e.stopPropagation();chatOpen?closeChat():openChat()};
+nin.value=myName;
+const startGame=()=>{myName=clean(nin.value)||myName;try{localStorage.setItem('bd_name',myName)}catch(e){}nbox.style.display='none'};
+document.getElementById('namego').onclick=startGame;nin.onkeydown=e=>{if(e.key=='Enter')startGame()};
 (async()=>{
   DB=await use('db');
   if(DB)DB.collection('cols').onSnapshot(snap=>{snap.docChanges().forEach(ch=>{
@@ -216,6 +247,7 @@ function sendPresence(now){
     if(typeof c!='string'||c.length!=H)return;
     for(let y=0;y<H;y++){const v=parseInt(c[y],16)||0;if(inb(x,y,z)&&W[x+z*N+y*N*N]!=v){W[x+z*N+y*N*N]=v;dirty=true}}})},e=>{onEl.textContent='⚠️ Dünya yüklenemedi: '+((e&&e.code)||'hata');warnUntil=performance.now()+8000});
   ROOM=await use('room');
+  if(ROOM&&ROOM.chat)ROOM.chat.onMsg(v=>{if(Date.now()-v.t<30000)addMsg(clean(v.n)||'Oyuncu',cleanMsg(v.m))});
   if(ROOM)ROOM.on('hit',m=>{
     const ps=ROOM.peers(),me=ps.find(p=>p.sameTab),from=ps.find(p=>p.peer==m.peer);
     if(m.isMe||!me||!from||!m.data||m.data.to!==me.peer)return;
@@ -233,7 +265,7 @@ let last=performance.now();
   requestAnimationFrame(loop);
   const dt=Math.min((now-last)/1000,.05);last=now;
   let f=-jy+(keys.w?1:0)-(keys.s?1:0),s=jx+(keys.d?1:0)-(keys.a?1:0);
-  if(invOpen)f=s=0;const l=Math.hypot(f,s);if(l>1){f/=l;s/=l}
+  if(invOpen||chatOpen)f=s=0;const l=Math.hypot(f,s);if(l>1){f/=l;s/=l}
   const sp=4.5,sy=Math.sin(yaw),cy=Math.cos(yaw);
   const mx=(-sy*f+cy*s)*sp*dt+kbx*dt,mz=(-cy*f-sy*s)*sp*dt+kbz*dt;kbx*=.9;kbz*=.9;
   if(!hit(px+mx,py,pz))px+=mx;
