@@ -23,6 +23,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #bar div.on{border-color:#fff;transform:scale(1.15)}
 #hint{position:fixed;left:0;right:0;bottom:calc(8px + env(safe-area-inset-bottom,0px));text-align:center;color:#fff;font-size:12px;text-shadow:0 1px 2px #000;pointer-events:none}
 #hp{position:fixed;top:calc(56px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);font-size:14px;letter-spacing:1px;pointer-events:none;white-space:nowrap}
+#hunger{position:fixed;top:calc(78px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);font-size:14px;letter-spacing:1px;pointer-events:none;white-space:nowrap;text-shadow:0 1px 2px #000;}
 #flash{position:fixed;inset:0;background:#f00;opacity:0;transition:opacity .25s;pointer-events:none}
 #invbtn{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:10px;background:var(--ui);border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:22px;z-index:12;touch-action:none}
 #inv{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10}
@@ -64,6 +65,7 @@ input{user-select:text;-webkit-user-select:text}
 <div id="cross"></div>
 <div id="bar"></div>
 <div id="hp"></div>
+<div id="hunger"></div>
 <div id="on">🟡 Bağlanıyor…</div>
 
 <div id="invbtn">🎒</div>
@@ -876,8 +878,30 @@ let hp=20;
 let peak=py;
 let invUntil=0;
 
-const hpEl=
-  document.getElementById('hp');
+const hpEl=document.getElementById('hp');
+const hungerEl=document.getElementById('hunger');
+
+let hunger=20;
+const MAX_HUNGER=20;
+
+let hungerAcc=0;
+let regenAcc=0;
+
+const showHunger=()=>{
+
+  const full=
+    Math.ceil(
+      hunger/2
+    );
+
+  hungerEl.textContent=
+    '🍗'.repeat(full)+
+    '🖤'.repeat(
+      10-full
+    );
+};
+
+showHunger();
 
 const fl=
   document.getElementById('flash');
@@ -975,10 +999,9 @@ const slots=[
 let si=0;
 
 const hex=t=>
-  '#'+
-  C[t][0]
-    .toString(16)
-    .padStart(6,'0');
+  FOOD[t]
+    ?'#c99555'
+    :'#'+C[t][0].toString(16).padStart(6,'0');
 
 const refresh=()=>{
 
@@ -992,13 +1015,12 @@ const refresh=()=>{
       hex(slots[i]);
 
     d.textContent=
-      slots[i]===100
-        ?'🪣'
-        :slots[i]===101
-          ?'💧'
-          :slots[i]===102
-            ?'🎆'
-            :'';
+      slots[i]===100?'🪣':
+      slots[i]===101?'💧':
+      slots[i]===102?'🎆':
+      FOOD[slots[i]]
+        ?FOOD[slots[i]].icon:
+      '';
 
     d.classList.toggle(
       'on',
@@ -1065,6 +1087,12 @@ const NAME={
   100:'Kova',
   101:'Su Kovası',
   102:'Havai Fişek'
+  110:'Elma',
+  111:'Ekmek',
+  112:'Havuç',
+  113:'Patates',
+  114:'Tavuk',
+  115:'Biftek',
 };
 
 const inv=
@@ -1284,6 +1312,13 @@ function act(pl){
     }
   }
 
+  if(FOOD[sel]){
+
+    eatFood(sel);
+
+    return;
+  }
+
   if(sel===102){
 
     useFirework();
@@ -1298,7 +1333,8 @@ function act(pl){
     return;
   }
 
-  if(!pl)return;
+  if(!pl)
+    return;
 
   const r=ray();
 
@@ -1306,13 +1342,26 @@ function act(pl){
     !r||
     !r.p||
     !inb(...r.p)
-  )return;
+  )
+    return;
 
-  set(...r.p,sel);
+  set(
+    ...r.p,
+    sel
+  );
 
-  if(hit(px,py,pz)){
+  if(
+    hit(
+      px,
+      py,
+      pz
+    )
+  ){
 
-    set(...r.p,0);
+    set(
+      ...r.p,
+      0
+    );
 
   }else{
 
@@ -3571,11 +3620,8 @@ const uwEl=
 function mlg(h){
 
   if(h>5)
-    sys(
-      '💧 MLG! '+
-      Math.round(h)+
-      ' blok yükseklikten hasarsız indin'
-    );
+    return;
+
 }
 
 function useBucket(){
@@ -3637,6 +3683,45 @@ function useBucket(){
 
     save(r.b);
   }
+}
+
+function eatFood(id){
+
+  const f=FOOD[id];
+
+  if(!f)
+    return;
+
+  if(hunger>=MAX_HUNGER){
+
+    sys(
+      '🍗 Açlığın zaten tamamen dolu'
+    );
+
+    return;
+  }
+
+  const old=hunger;
+
+  hunger=
+    Math.min(
+      MAX_HUNGER,
+      hunger+f.hunger
+    );
+
+  const gained=
+    hunger-old;
+
+  showHunger();
+
+  sys(
+    f.icon+
+    ' '+
+    f.name+
+    ' yedin. +'+
+    gained+
+    ' açlık'
+  );
 }
 
 /* =========================================================
@@ -4710,6 +4795,69 @@ let last=
 
     f/=l;
     s/=l;
+  }
+
+  /* =====================================================
+     AÇLIK / DOĞAL REJENERASYON
+     ===================================================== */
+
+  const moving=
+    l>.05;
+
+  if(moving){
+
+    hungerAcc+=dt;
+
+    /*
+      Hareket ederken yaklaşık 10 saniyede
+      1 açlık puanı gider.
+    */
+    if(hungerAcc>=10){
+
+      hunger=
+        Math.max(
+          0,
+          hunger-1
+        );
+
+      hungerAcc=0;
+
+      showHunger();
+    }
+
+  }else{
+
+    hungerAcc=0;
+  }
+
+  /*
+    Açlık tamamen doluyken,
+    eksik can varsa 2 saniyede
+    1 kalp (+2 HP) yenilenir.
+  */
+  if(
+    hunger>=MAX_HUNGER&&
+    hp<20
+  ){
+
+    regenAcc+=dt;
+
+    if(regenAcc>=2){
+
+      hp=
+        Math.min(
+          20,
+          hp+2
+        );
+
+      regenAcc=0;
+
+      showHp();
+    }
+
+  }else{
+
+    regenAcc=0;
   }
 
   /*
