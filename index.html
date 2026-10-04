@@ -998,10 +998,19 @@ const slots=[
 
 let si=0;
 
-const hex=t=>
-  FOOD[t]
-    ?'#c99555'
-    :'#'+C[t][0].toString(16).padStart(6,'0');
+const FOOD={
+  110:{name:'Elma',hunger:4,icon:'🍎'},
+  111:{name:'Ekmek',hunger:5,icon:'🍞'},
+  112:{name:'Havuç',hunger:3,icon:'🥕'},
+  113:{name:'Patates',hunger:3,icon:'🥔'},
+  114:{name:'Tavuk',hunger:6,icon:'🍗'},
+  115:{name:'Biftek',hunger:8,icon:'🥩'}
+};
+
+const hex=t=>{
+  if(FOOD[t]) return FOOD[t].icon;
+  return '#'+C[t][0].toString(16).padStart(6,'0');
+};
 
 const refresh=()=>{
 
